@@ -2,3 +2,4 @@ myenv
 myenv/*
 *.zip
 *.swp
+*.bak
