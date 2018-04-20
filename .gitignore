@@ -2,4 +2,5 @@ myenv
 myenv/*
 *.zip
 *.swp
+*.swo
 *.bak
