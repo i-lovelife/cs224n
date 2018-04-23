@@ -101,9 +101,10 @@ class SoftmaxModel(Model):
             pred: A tensor of shape (batch_size, n_classes)
         """
         ### YOUR CODE HERE
-        W = tf.Variable(tf.zeros([self.config.n_features,self.config.n_classes]),dtype=tf.float32)
+        W = tf.Variable(tf.zeros([self.config.n_features,self.config.n_classes]),dtype=tf.float32,name="W")
         b = tf.Variable(tf.zeros([self.config.n_classes,]),dtype=tf.float32)
         pred = softmax(tf.matmul(self.input_placeholder, W) + b)
+        pred = tf.Print(pred, [pred, pred.shape], message='debug message')
         ### END YOUR CODE
         return pred
 
@@ -118,7 +119,7 @@ class SoftmaxModel(Model):
             loss: A 0-d tensor (scalar)
         """
         ### YOUR CODE HERE
-        loss = cross_entropy_loss(pred, self.labels_placeholder)
+        loss = cross_entropy_loss(self.labels_placeholder, pred)
         ### END YOUR CODE
         return loss
 
@@ -211,7 +212,7 @@ def test_softmax_model():
     # Finalizing the graph causes tensorflow to raise an exception if you try to modify the graph
     # further. This is good practice because it makes explicit the distinction between building and
     # running the graph.
-    graph.finalize()
+    #graph.finalize()
 
     # Create a session for running ops in the graph
     with tf.Session(graph=graph) as sess:
@@ -222,6 +223,7 @@ def test_softmax_model():
         sess.run(init_op)
         # Fit the model
         print('labels\n',labels,'\n')
+        print('inputs\n',inputs,'\n')
         losses = model.fit(sess, inputs, labels)
 
     # If ops are implemented correctly, the average loss should fall close to zero
