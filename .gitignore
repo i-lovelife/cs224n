@@ -4,3 +4,4 @@ myenv/*
 *.swp
 *.swo
 *.bak
+*.pyc
