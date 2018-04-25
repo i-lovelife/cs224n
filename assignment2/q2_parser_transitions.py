@@ -97,7 +97,6 @@ def minibatch_parse(sentences, model, batch_size):
         for i in range(cnt):
             use_pps[i].parse_step(transitions[i])
     dependencies = list(map(lambda x: x.dependencies, partial_parses))
-    print (dependencies)
     ### END YOUR CODE
 
     return dependencies

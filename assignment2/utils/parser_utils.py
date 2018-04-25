@@ -363,7 +363,8 @@ def load_and_preprocess_data(reduced=True):
     start = time.time()
     word_vectors = {}
     for line in open(config.embedding_file).readlines():
-        sp = line.strip().split()
+        #attention! something wrong with uni code
+        sp = line.strip().rstrip('\x00').split()
         word_vectors[sp[0]] = [float(x) for x in sp[1:]]
     embeddings_matrix = np.asarray(np.random.normal(0, 0.9, (parser.n_tokens, 50)), dtype='float32')
 
