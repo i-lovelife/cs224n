@@ -5,3 +5,5 @@ myenv/*
 *.swo
 *.bak
 *.pyc
+assignment2/data/glove.6B.50d.txt
+assignment2/logs/

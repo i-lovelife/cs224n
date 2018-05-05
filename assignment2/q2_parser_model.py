@@ -1,4 +1,5 @@
 import pickle
+import numpy as np
 import os
 import time
 import tensorflow as tf
@@ -21,9 +22,11 @@ class Config(object):
     dropout = 0.5  # (p_drop in the handout)
     embed_size = 50
     hidden_size = 200
-    batch_size = 1024
+    batch_size = 64
     n_epochs = 10
+    #n_epochs = 1
     lr = 0.0005
+    #lr = 0.001
 
 
 class ParserModel(Model):
@@ -54,9 +57,9 @@ class ParserModel(Model):
         (Don't change the variable names)
         """
         ### YOUR CODE HERE
-        self.input_placeholder = tf.placeholder(shape=[None, self.config.n_features], dtype=tf.int32)
-        self.labels_placeholder = tf.placeholder(shape=[None, self.config.n_classes], dtype=tf.float32)
-        self.dropout_placeholder = tf.placeholder(shape=[], dtype=tf.float32)
+        self.input_placeholder = tf.placeholder(shape=[None, self.config.n_features], dtype=tf.int32, name='input')
+        self.labels_placeholder = tf.placeholder(shape=[None, self.config.n_classes], dtype=tf.float32, name='label')
+        self.dropout_placeholder = tf.placeholder(shape=[], dtype=tf.float32, name ='dropout_prob')
         ### END YOUR CODE
 
     def create_feed_dict(self, inputs_batch, labels_batch=None, dropout=0):
@@ -111,7 +114,8 @@ class ParserModel(Model):
         ### YOUR CODE HERE
         pretrained = tf.Variable(self.pretrained_embeddings)
         embeddings = tf.nn.embedding_lookup(pretrained, self.input_placeholder)
-        embeddings = tf.reshape(embeddings, [-1, self.config.embed_size * self.config.n_features])
+        embeddings = tf.reshape(embeddings, [-1, self.config.embed_size * self.config.n_features], 
+                    name='word_embedding')
         ### END YOUR CODE
         return embeddings
 
@@ -135,18 +139,21 @@ class ParserModel(Model):
         Returns:
             pred: tf.Tensor of shape (batch_size, n_classes)
         """
-
+        #x:-1*1800
         x = self.add_embedding()
         ### YOUR CODE HERE
-        xavier_initializer = xavier_weight_init()
-        W = xavier_initializer([self.config.embed_size * self.config.n_features, self.config.hidden_size])
+        W = tf.get_variable("W", shape = [self.config.embed_size * self.config.n_features, 
+                                    self.config.hidden_size],
+                                initializer=tf.contrib.layers.xavier_initializer())
         b1 = tf.Variable(tf.zeros([self.config.hidden_size, ]), dtype=tf.float32)
         h = tf.nn.relu(tf.matmul(x, W) + b1)
         h_drop = tf.nn.dropout(h, 1-self.dropout_placeholder)
-        
-        U = xavier_initializer([self.config.hidden_size, self.config.n_classes])
+        U = tf.get_variable("U", shape = [self.config.hidden_size, self.config.n_classes],
+                            initializer=tf.contrib.layers.xavier_initializer())
         b2 = tf.Variable(tf.zeros([self.config.n_classes, ]), dtype=tf.float32)
         pred = tf.matmul(h_drop, U) + b2
+        with tf.variable_scope("pred"):
+            pred = tf.identity(pred, name="pred")
         ### END YOUR CODE
         return pred
 
@@ -164,10 +171,11 @@ class ParserModel(Model):
             loss: A 0-d tensor (scalar)
         """
         ### YOUR CODE HERE
-        loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(
-                            labels = self.labels_placeholder,
-                            logits = pred))
-
+        loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(
+                            logits = pred,
+                            labels = self.labels_placeholder
+                            ),
+                            name='loss')
         ### END YOUR CODE
         return loss
 
@@ -200,13 +208,19 @@ class ParserModel(Model):
         feed = self.create_feed_dict(inputs_batch, labels_batch=labels_batch,
                                      dropout=self.config.dropout)
         _, loss = sess.run([self.train_op, self.loss], feed_dict=feed)
+        #graph = tf.get_default_graph()
+        #pred = graph.get_tensor_by_name("pred/pred:0").eval(feed_dict=feed)
+        #pred = np.array(pred).argmax(axis=1)
+        #count =[np.sum(pred==i) for i in range(3)]
+        #print(count)
+
         return loss
 
     def run_epoch(self, sess, parser, train_examples, dev_set):
         n_minibatches = 1 + len(train_examples) / self.config.batch_size
         prog = tf.keras.utils.Progbar(target=n_minibatches)
         for i, (train_x, train_y) in enumerate(minibatches(train_examples, self.config.batch_size)):
-            print('len_x = {}, len_y = {}'.format(len(train_x), len(train_y)))
+            #print('len_x = {}, len_y = {}'.format(train_x.shape, train_y.shape))
             loss = self.train_on_batch(sess, train_x, train_y)
             #prog.update(i + 1, [("train loss", loss)], force=i + 1 == n_minibatches)
             prog.update(i + 1, [("train loss", loss)])
@@ -240,6 +254,7 @@ def main(debug=True):
     print(80 * "=")
     config = Config()
     parser, embeddings, train_examples, dev_set, test_set = load_and_preprocess_data(debug)
+    print(len(list(train_examples)))
     if not os.path.exists('./data/weights/'):
         os.makedirs('./data/weights/')
 
@@ -256,12 +271,11 @@ def main(debug=True):
     with tf.Session(graph=graph) as session:
         parser.session = session
         session.run(init_op)
-
+        tf.summary.FileWriter('./logs/graph/', session.graph)
         print(80 * "=")
         print("TRAINING")
         print(80 * "=")
         model.fit(session, saver, parser, train_examples, dev_set)
-
         if not debug:
             print(80 * "=")
             print("TESTING")

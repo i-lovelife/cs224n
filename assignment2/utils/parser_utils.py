@@ -31,6 +31,7 @@ class Config(object):
     train_file = 'train.conll'
     dev_file = 'dev.conll'
     test_file = 'test.conll'
+    #embedding_file = './data/glove.6B.50d.txt'
     embedding_file = './data/en-cw.txt'
 
 
@@ -350,6 +351,7 @@ def load_and_preprocess_data(reduced=True):
                           lowercase=config.lowercase)
     if reduced:
         train_set = train_set[:1000]
+        #dev_set = dev_set[:500]
         dev_set = dev_set[:500]
         test_set = test_set[:500]
     print("took {:.2f} seconds".format(time.time() - start))

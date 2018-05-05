@@ -23,8 +23,8 @@ class Config(object):
     n_samples = 1024
     n_features = 100
     n_classes = 5
-    batch_size = 64
-    n_epochs = 50
+    batch_size = 1024
+    n_epochs = 100
     lr = 1e-4
 
 
@@ -103,8 +103,8 @@ class SoftmaxModel(Model):
         ### YOUR CODE HERE
         W = tf.Variable(tf.zeros([self.config.n_features,self.config.n_classes]),dtype=tf.float32,name="W")
         b = tf.Variable(tf.zeros([self.config.n_classes,]),dtype=tf.float32)
-        pred = softmax(tf.matmul(self.input_placeholder, W) + b)
-        pred = tf.Print(pred, [pred, pred.shape], message='debug message')
+        pred = tf.matmul(self.input_placeholder, W)+ b
+        pred = softmax(pred)
         ### END YOUR CODE
         return pred
 
@@ -160,9 +160,12 @@ class SoftmaxModel(Model):
         """
         n_minibatches, total_loss = 0, 0
         for input_batch, labels_batch in get_minibatches([inputs, labels], self.config.batch_size):
+            #print('='*80)
+            #print(input_batch,labels_batch)
+            #print('='*80)
             n_minibatches += 1
             total_loss += self.train_on_batch(sess, input_batch, labels_batch)
-        return total_loss / n_minibatches
+        return total_loss / (self.config.batch_size * n_minibatches)
 
     def fit(self, sess, inputs, labels):
         """Fit model on provided data.
@@ -196,12 +199,14 @@ class SoftmaxModel(Model):
 def test_softmax_model():
     """Train softmax model for a number of steps."""
     config = Config()
+    tf.reset_default_graph()
 
     # Generate random data to train the model on
     np.random.seed(1234)
     inputs = np.random.rand(config.n_samples, config.n_features)
     labels = np.zeros((config.n_samples, config.n_classes), dtype=np.int32)
-    labels[:, 0] = 1
+    labels[np.arange(config.n_samples), np.random.randint(5,size=config.n_samples)] = 1
+    #labels[:,0] = 1
 
     # Tell TensorFlow that the model will be built into the default Graph.
     # (not required but good practice)
