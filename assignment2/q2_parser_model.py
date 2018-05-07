@@ -152,8 +152,6 @@ class ParserModel(Model):
                             initializer=tf.contrib.layers.xavier_initializer())
         b2 = tf.Variable(tf.zeros([self.config.n_classes, ]), dtype=tf.float32)
         pred = tf.matmul(h_drop, U) + b2
-        with tf.variable_scope("pred"):
-            pred = tf.identity(pred, name="pred")
         ### END YOUR CODE
         return pred
 

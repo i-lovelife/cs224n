@@ -1,0 +1,7 @@
+2018-05-07 23:38:43,281:INFO: Building model...
+2018-05-07 23:38:47,143:WARNING: From /home/lnan6257/work/Mrc2018/myenv/lib/python3.5/site-packages/tensorflow/contrib/learn/python/learn/datasets/base.py:198: retry (from tensorflow.contrib.learn.python.learn.datasets.base) is deprecated and will be removed in a future version.
+Instructions for updating:
+Use the retry module or similar alternatives.
+2018-05-07 23:38:50,914:INFO: took 7.63 seconds
+2018-05-07 23:38:51,617:INFO: Epoch 1 out of 10
+2018-05-07 23:38:51,849:DEBUG: [4 1 4 0 4 4 4 4 4 4 4 0 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 0 4 4]
