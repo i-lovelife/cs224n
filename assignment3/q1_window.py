@@ -7,6 +7,9 @@ from __future__ import absolute_import
 from __future__ import division
 
 from functools import reduce
+from tensorflow.python import debug as tf_debug
+
+import numpy as np
 import argparse
 import sys
 import time
@@ -45,6 +48,7 @@ class Config:
     hidden_size = 200
     batch_size = 2048
     n_epochs = 10
+    #n_epochs = 1
     lr = 0.001
 
     def __init__(self, output_path=None):
@@ -145,7 +149,7 @@ class WindowModel(NERModel):
 
         ### END YOUR CODE
 
-    def create_feed_dict(self, inputs_batch, labels_batch=None, dropout=1):
+    def create_feed_dict(self, inputs_batch, labels_batch=None, dropout=0):
         """Creates the feed_dict for the model.
         A feed_dict takes the form of:
         feed_dict = {
@@ -224,18 +228,22 @@ class WindowModel(NERModel):
         """
 
         x = self.add_embedding()
+        self.x = x
         dropout_rate = self.dropout_placeholder
         ### YOUR CODE HERE (~10-20 lines)
-        W = tf.get_variable("W", shape = [self.config.n_window_features * self.config.embed_size, 
+        with tf.variable_scope('weight'):
+            W = tf.get_variable("W", shape = [self.config.n_window_features * self.config.embed_size, 
                                     self.config.hidden_size],
                                 initializer=tf.contrib.layers.xavier_initializer())
         b1 = tf.Variable(tf.zeros([self.config.hidden_size, ]), dtype=tf.float32)
         h = tf.nn.relu(tf.matmul(x, W) + b1)
-        h_drop = tf.nn.dropout(h, 1-self.dropout_placeholder)
-        U = tf.get_variable("U", shape = [self.config.hidden_size, self.config.n_classes],
+        h_drop = tf.nn.dropout(h, 1-dropout_rate)
+        with tf.variable_scope('weight'):
+            U = tf.get_variable("U", shape = [self.config.hidden_size, self.config.n_classes],
                             initializer=tf.contrib.layers.xavier_initializer())
         b2 = tf.Variable(tf.zeros([self.config.n_classes, ]), dtype=tf.float32)
         pred = tf.matmul(h_drop, U) + b2
+        
         ### END YOUR CODE
         return pred
 
@@ -258,6 +266,9 @@ class WindowModel(NERModel):
                             labels = tf.one_hot(self.labels_placeholder, self.config.n_classes)
                             ),
                             name='loss')                          
+        with tf.variable_scope('weight',reuse=True):
+            self.W_grad, self.U_grad = tf.gradients(loss, [tf.get_variable("W"), 
+                                tf.get_variable("U")])
         ### END YOUR CODE
         return loss
 
@@ -311,12 +322,18 @@ class WindowModel(NERModel):
         """
         feed = self.create_feed_dict(inputs_batch)
         predictions = sess.run(tf.argmax(self.pred, axis=1), feed_dict=feed)
+        score = sess.run(self.pred, feed_dict=feed)
         return predictions
 
     def train_on_batch(self, sess, inputs_batch, labels_batch):
         feed = self.create_feed_dict(inputs_batch, labels_batch=labels_batch,
                                      dropout=self.config.dropout)
         _, loss = sess.run([self.train_op, self.loss], feed_dict=feed)
+        print('loss', loss)
+        W_grad, U_grad = sess.run([self.W_grad, self.U_grad], feed_dict = feed)
+        print(np.abs(W_grad).sum())
+        print(np.abs(U_grad).sum())
+        
         return loss
 
     def __init__(self, helper, config, pretrained_embeddings, report=None):
@@ -398,6 +415,8 @@ def do_train(args):
         saver = tf.train.Saver()
 
         with tf.Session() as session:
+            #session = tf_debug.LocalCLIDebugWrapperSession(session)
+            #session.add_tensor_filter("has_inf_or_nan", tf_debug.has_inf_or_nan)
             session.run(init)
             model.fit(session, saver, train, dev)
             if report:
